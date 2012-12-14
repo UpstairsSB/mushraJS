@@ -48,7 +48,7 @@
 		<br />
 				
 		<!-- this button starts the first test -->
-		<button id="startTest" onclick="RunTest(0);">Start!</button>	
+		<button id="startTest" onclick="RunTest(0);">Start!</button>
 	</div>
 
 	<!-- final text after all tests have passed -->
@@ -63,9 +63,12 @@
 				Please submit the results to our server. If you enter a name or email adress this 
 				would make it easier to contact you if we have further questions. 
 			</p>
-			
-			Name: <input id="UserName" type="text" size="40" maxlength="40" /><br />
+			<p style="display:none">	
+			Name: <input id="UserName" type="text" size="40" maxlength="40"/><br />
+			</p>
+			<p>
 			Email: <input id="UserEMail" type="text" size="40" maxlength="40" /><br />
+			</p>
 			<br />
 			<button id="SubmitData" onclick="SubmitTestResults();">Submit</button>
 		</div>
@@ -87,8 +90,8 @@
 
 	<!-- controls to go to next/previous test -->
 	<div id="TestControls" class="commonBox">
-		<button id="nextTest" onclick="RunTest(TestState.CurrentTest+1);" >Next Test</button>		
-		<button id="prevTest" onclick="RunTest(TestState.CurrentTest-1);" >Previous Test</button>	
+		<button id="nextTest" onclick="RunTest(TestState.CurrentTest+1);" >Next Test</>		
+		<button id="prevTest" onclick="RunTest(TestState.CurrentTest-1);" >Previous Test</>	
 	</div>
 
 	<!-- playback control -->
@@ -118,9 +121,42 @@
 	
 	</div>
 </div>
+<script>
+function AjaxTest() {
+	console.log("button clicked");
+	var jsonData =  {id : 'hangloung.lee', 
+			tests : [
+				{testName: 'test1', reference:100, test1:80, test2:70, test3:60, test4:70},
+				{testName: 'test2', reference:100, test1:80, test2:70, test3:60, test4:70}
+			]};
+		
+	var data = JSON.stringify(jsonData);
+	$.ajax({
+		url : 'log',
+		type : 'POST',
+		data : {json: data},
+		dataType : 'json',
+		error : function(xhr, status, e) {
+			alert('ajax call error');
+		},
+		success : function(jdata) {
+			console.log(jdata);
+		}
+	});
+}
 
+function showTest() {
+	$.ajax({
+		url : 'show',
+		error : function(xhr, status, e) {
+			alert('ajax call error');
+		},
+		success : function(jdata) {
+			console.log(jdata);
+		}
+	});
+}
+</script>
 </body>
 
 </html>
-
-

@@ -1,0 +1,9 @@
+%% -*- erlang -*-
+{application, myweb_server,
+ [{description, "myweb_server"},
+  {vsn, "0.1"},
+  {modules, []},
+  {registered, []},
+  {mod, {'myweb_server_app', []}},
+  {env, []},
+  {applications, [kernel, stdlib, crypto]}]}.

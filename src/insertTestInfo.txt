@@ -1,0 +1,6 @@
+NewTestInfo = [{test_info, <<"mobileToPc">>, <<"mobileToPc">>, 0, <<"reference">>},
+        {test_info, <<"mobileToPc">>, <<"mobileToPc">>, 1, <<"i4_to_mac">>},
+        {test_info, <<"mobileToPc">>, <<"mobileToPc">>, 2, <<"mac_to_win">>},
+        {test_info, <<"mobileToPc">>, <<"mobileToPc">>, 3, <<"s2_to_mac">>},
+        {test_info, <<"mobileToPc">>, <<"mobileToPc">>, 4, <<"win_to_mac">>}].
+mushradb:write_test_info(NewTestInfo).

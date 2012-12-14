@@ -24,9 +24,8 @@ var TestState = {
 	"FileMappings": {},		// arrays with random file mappings
 	"Ratings": {},			// array with ratings
 	"AudiosInLoadQueue": -1,
-};
+}
 
-var TestMapping = [];
 
 // ###################################################################
 // Audio pool object. Creates and manages <audio> tags for playback
@@ -141,7 +140,7 @@ var AudioPool = {
 		this.LoopAudio = !this.LoopAudio;
 
 	},		
-};
+}
 
 // ###################################################################
 // some helper functions
@@ -154,7 +153,7 @@ function log10(val) {
 // check for Internet Explorer version
 function clientIsIE() {
     if (/MSIE (\d+\.\d+);/.test(navigator.userAgent)){ //test for MSIE x.x;
-       var ieversion=new Number(RegExp.$1); // capture x.x portion and store as a number
+       var ieversion=new Number(RegExp.$1) // capture x.x portion and store as a number
        return ieversion;
     }
     return 0;
@@ -246,7 +245,7 @@ function audioTimeUpdate(e) {
 // audio loading error callback
 function audioLoadError(e) {
 
-//	var s = parseInt(e.target.currentTime % 60);
+	var s = parseInt(e.target.currentTime % 60);
 
 	var errorTxt = "<p>ERROR loading audio file "+ e.target.src+"</p>";
 	
@@ -283,36 +282,31 @@ function saveRatings(TestIndx) {
 }
 
 // ###################################################################
-// create random mappings
-function createRandomMapping(NumItems, TestIndx) {
+// create random mapping to test files
+function createFileMapping(TestIndx) {
+	var fileMapping = [];
+	var NumFiles = TestData.Testsets[TestIndx].Files.length;
 	
-	// check if mapping is for audio files
-	var FileMapping = 0;
-	if (arguments.length > 1) FileMapping = 1;
-	
-	// if mapping audio files, add index for hidden reference
-	if (FileMapping) NumItems += 1;
-	
-	// create random mapping
-	var mapping = [];
-	var RandNumber = 0;
-	for (var i = 0; i<NumItems; i++) { 		
+	for (var i = 0; i<NumFiles+1; i++) { 		
 		
-		do {
-			RandNumber = Math.floor(Math.random()*NumItems);
-		} while(isInArray(mapping, RandNumber));
-	
-		mapping.push(RandNumber);	
+		var RandFileNumber = Math.floor(Math.random()*(NumFiles+1));
+		if (RandFileNumber>NumFiles) RandFileNumber = NumFiles;
+		
+		if (isInArray(fileMapping, RandFileNumber)==true) {
+			RandFileNumber = NumFiles;
+			while (isInArray(fileMapping, RandFileNumber)==true) {
+				RandFileNumber--;
+			}
+		}
+		if (RandFileNumber<0) alert(fileMapping);
+		fileMapping.push(RandFileNumber);	
 	}
 	
-	// if mapping audio files, mark hidden reference
-	if (FileMapping) {
-		$.each(mapping, function(index, value) { 
-			if (value==NumItems-1) mapping[index]='HiddenRef';
-		});
-	}
+	$.each(fileMapping, function(index, value) { 
+		if (value==NumFiles) fileMapping[index]='HiddenRef';
+	});
 	
-	return mapping;
+	TestState.FileMappings[TestIndx] = fileMapping;
 }
 
 // ###################################################################
@@ -377,13 +371,34 @@ function Results2Text() {
 	
 	return resultString;
 }
+function Results2Json() {
+	var sep = ";";
+	//var resultString = $('#UserName').val() + sep + $('#UserEMail').val() + lbr;
+	var aTest = [];
+	var resultsJson = {id : $('#UserEMail').val(), tests : aTest};
+	var oTest = {};
+	for (var i = 0; i<TestData.Testsets.length; i++) { 
+		var aAnswer = [];
+		for (var j = 0; j < TestData.Testsets[i].Files.length; j++) {
+			aAnswer.push(TestState.Ratings[i][j]);
+		}
+		oTest = {
+				testName : TestData.Testsets[i].Name,
+				testId : TestData.TestId, 
+				reference : TestState.Ratings[i]["HiddenRef"],
+				testAnswer : aAnswer,
+		};
+		aTest.push(oTest);
+	}
 
+	return resultsJson;	
+}
 // ###################################################################
 // submit test results to server
 function SubmitTestResults() {
 	
 	var UserName = $('#UserName').val();
-	
+/*	
 	$.ajax({
 			type: "POST",
 			url: TestData.SubmitResultsURL,
@@ -414,7 +429,30 @@ function SubmitTestResults() {
                 	$('#SubmitData').button('option',{ icons: { primary: 'ui-icon-alert' }});			    			
 			});		
 	$('#SubmitData').button('option',{ icons: { primary: 'load-indicator' }});
-
+*/
+			//make array to be sent
+	var data = JSON.stringify(Results2Json()); 
+	$.ajax({
+			url : TestData.SubmitResultsURL,
+			type : 'POST',
+			data : {json: data},
+			dataType : 'json',
+			error : function(xhr, status, e) {
+				alert('sending data to server error');
+    			$('#SubmitBox').html("<span class='error'>The following error occured during your submission:<br/>"
+    			         +ajaxOptions+
+    			         "<br/><br/> Please copy/paste the following table content and send it to our email adress "
+    			         +TestData.SupervisorContact+"<br/><br/> Sorry for any inconvenience!</span><br/><br/>");
+	    			$("#ResultsBox").show();   
+                	$('#SubmitData').button('option',{ icons: { primary: 'ui-icon-alert' }});			    			
+			},
+			success : function(jdata) {
+   				$('#SubmitBox').html("Your submission was succesful.<br/><br/>");
+	    		//$("#ResultsBox").show();				
+               	$('#SubmitData').button('option',{ icons: { primary: 'ui-icon-check' }});	
+               	TestState.TestIsRunning = 0;			
+			}
+	});
 }
 
 // ###################################################################
@@ -435,23 +473,18 @@ function AudioID2Path(TestIndx, AudioID) {
 
 // ###################################################################
 // main routine
-// prepares display to run test with number PreMapIndx
-function RunTest(PreMapIndx) {
+// prepares display to run test with number TestIndx
+function RunTest(TestIndx) {
 
     pauseAudios();
-    
-    // generate test mapping if not done
-    if (TestMapping.length === 0) {
-    	TestMapping = createRandomMapping(TestData.Testsets.length);
-    }
 
 	// save ratings from last test if available
 	if (TestState.CurrentTest>=0) saveRatings(TestState.CurrentTest);
 	
-	if (PreMapIndx<0) PreMapIndx=0;
+	if (TestIndx<0) TestIndx=0;
 
 	// if previous test was last one, ask before loading final page and exiting test
-	if (PreMapIndx>=TestData.Testsets.length) {
+	if (TestIndx>=TestData.Testsets.length) {
 		if (confirm('This was the last test. Do you want to finish?')) {
 		
 			$('#TableContainer').hide();
@@ -470,6 +503,7 @@ function RunTest(PreMapIndx) {
 				$("#ResultsBox").show();
 				$("#SubmitBox").hide();
 			}
+
 		}
 		return; 	
 	}
@@ -485,9 +519,8 @@ function RunTest(PreMapIndx) {
 	AudioPool.clear();
 	
 	// create random file mapping if not yet done
-	if (!TestState.FileMappings[TestMapping[PreMapIndx]]) {
-		var NumItems = TestData.Testsets[TestMapping[PreMapIndx]].Files.length;
-		TestState.FileMappings[TestMapping[PreMapIndx]] = createRandomMapping(NumItems, TestMapping[PreMapIndx]);
+	if (!TestState.FileMappings[TestIndx]) {
+		createFileMapping(TestIndx);
 	}	
 	
 	// create new test table
@@ -510,19 +543,19 @@ function RunTest(PreMapIndx) {
 	cell[3].innerHTML = "<img id='ScaleImage' src='"+TestData.RateScalePng+"'/>";  	
 	//cell[3].innerHTML = '<object type="image/svg+xml" data="'+TestData.RateScaleSvg+'"><img src="'+TestData.RateScalePng+'" alt="Blue Square"/></object>';
 	
-	AudioPool.addAudio(AudioID2Path(TestMapping[PreMapIndx], fileID), fileID);
+	AudioPool.addAudio(AudioID2Path(TestIndx, fileID), fileID)
 	
 	
     // add spacing
     row = tab.insertRow(-1);
     row.setAttribute("height","5"); 
 
-//	var rateMin = TestData.RateMinValue;
-//	var rateMax = TestData.RateMaxValue;
+	var rateMin = TestData.RateMinValue;
+	var rateMax = TestData.RateMaxValue;
 	
 	// add test items
-    for (var i = 0; i<TestState.FileMappings[TestMapping[PreMapIndx]].length; i++) { 
-		var fileID = TestState.FileMappings[TestMapping[PreMapIndx]][i];
+    for (var i = 0; i<TestState.FileMappings[TestIndx].length; i++) { 
+		var fileID = TestState.FileMappings[TestIndx][i];
         row[i]  = tab.insertRow(-1);
         cell[0] = row[i].insertCell(-1);
         cell[0].innerHTML = "<span class='testItem'>Test Item "+ (i+1)+"</span>";
@@ -541,12 +574,12 @@ function RunTest(PreMapIndx) {
         }
         cell[3].innerHTML = "<div class='RateSlider' id='slider"+fileID+"' >"+fileIDstr+"</div>";
 
-		AudioPool.addAudio(AudioID2Path(TestMapping[PreMapIndx], fileID), fileID);
+		AudioPool.addAudio(AudioID2Path(TestIndx, fileID), fileID);
 
     }        
 
 	// set current test name
-	$('#TestHeading').html(TestData.Testsets[TestMapping[PreMapIndx]].Name + " (" + (PreMapIndx+1) + " of " + TestData.Testsets.length + ")");
+	$('#TestHeading').html(TestData.Testsets[TestIndx].Name + " (" + (TestIndx+1) + " of " + TestData.Testsets.length + ")");
 	$('#TestHeading').show();
 
 	// hide everything instead of load animation
@@ -557,7 +590,7 @@ function RunTest(PreMapIndx) {
 	$('#LoadOverlay').show();
 		
 	// set some state variables
-	TestState.CurrentTest = PreMapIndx;
+	TestState.CurrentTest = TestIndx;
 	TestState.TestIsRunning = 1;
 	
 	// move the created table to the DOM
@@ -585,7 +618,7 @@ function RunTest(PreMapIndx) {
 	});	
 	
     // load already existing ratings
-	readRatings(PreMapIndx);			
+	readRatings(TestIndx);			
 	
 }
 
@@ -659,6 +692,6 @@ function PageReady() {
 		} else {
 			return;
 		}
-	};
+	}
 
 }

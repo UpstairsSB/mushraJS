@@ -1,0 +1,264 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>test result</title>
+<link type="text/css" href="css/styles.css" rel="Stylesheet" />
+<script src="js/jquery.js" type="text/javascript"></script>
+<script src="js/jquery-ui.custom.min.js" type="text/javascript"></script>
+<script src="js/jquery.tmpl.js" type="text/javascript"></script>
+</head>
+<body>
+	<br></br>
+	<br></br>
+
+	<div id="testResult" align="center">
+		
+	</div>
+	<div align="center" onclick="showParticipants()"></div>
+	<script>
+var infoRet = {"result":[["test_info","No1","testName1",0,"reference"],["test_info","No1","testName1",1,"ios3_to_win"],["test_info","No1","testName1",2,"ios4_to_win"],["test_info","No1","testName1",3,"mac_to_win"],["test_info","No1","testName1",4,"win_to_win"],["test_info","No1","testName1",5,"win_to_mac"]]};
+var showRet = {"result":[["mushra","test1@nhn.com","No1","testName1",86,[100,98,97,96,95],1354869203090633],["mushra","test5@nhn.com","No1","testName2",10,[100,98,97,96,95],1354869203090633],["mushra","test3@nhn.com","No1","testName2",66,[100,98,97,96,95],1354869203090633],["mushra","test2@nhn.com","No1","testName2",66,[100,98,97,96,95],1354869203090633],["mushra","test4@nhn.com","No1","testName2",99,[100,98,97,96,95],1354869203090633]]};
+
+//var infoRet = {"result":[]};
+//var showRet = {"result":[]};
+
+//var infoRet;
+//var showRet;
+
+//defination
+var testId = "{{testId}}";
+var show_testerIdIndex = 1;
+var show_questionIndex = 2;
+var show_referenceIndex = 4;
+var show_otherIndex = 5;
+var show_testNameIndex = 3;
+var testInfo_testNameIndex = 2;
+var testInfo_questionIndex = 4;
+
+function getTestNames(infoRet) {
+	var result = infoRet.result;
+	var aReturn = [];
+	var testName = result[0][testInfo_testNameIndex];	//show have more than one test name
+	aReturn.push(testName);
+	
+	for (var i = 0; i < result.length; i++) {
+		//console.log(result[i][testInfo_testNameIndex]);	
+		if (testName != result[i][testInfo_testNameIndex]) {
+			testName = result[i][testInfo_testNameIndex];
+			aReturn.push(testName);
+		}
+	}
+	return aReturn;
+}
+
+function getQestionScore(testName, infoRet, showRet) {
+	var testIndex = 0;
+	var testInfoIndex = 0;
+	
+	var aInfoRet = infoRet.result;
+	var aShowRet = showRet.result;
+	
+	var referenceDispersion = 0;
+	var referenceTotal = 0;
+	var referenceAverage = 0;
+	var referenceDiviation = 0;
+	
+	var otherDispersion = [];
+	var otherTotal = [];
+	var otherAverage = [];
+	var otherDiviation = [];
+	
+	var result = [];
+
+	//get testInfo index
+	for (testInfoIndex = 0; testInfoIndex < aInfoRet.length; testInfoIndex++) {
+		if (aInfoRet[testInfoIndex][testInfo_testNameIndex] == testName) {
+			break;
+		}
+	}
+	
+	//get question count
+	for (testIndex = 0; testIndex < aShowRet.length; testIndex++) {
+		if (aShowRet[testIndex][show_testNameIndex] == testName) {
+			break;
+		}
+	}
+	
+	//initiate
+	for (var j = 0; j < aShowRet[testIndex][show_otherIndex].length; j++) {
+		otherTotal[j] = 0;
+		otherDispersion[j] = 0;
+		otherAverage[j] = 0;
+		otherDiviation[j] = 0;
+	}
+	
+	//get total & dispersion
+	for (var i = testIndex; i < aShowRet.length; i++) {
+		referenceTotal += aShowRet[i][show_referenceIndex];
+		referenceDispersion += aShowRet[i][show_referenceIndex] * aShowRet[i][show_referenceIndex];
+		
+		for (var j = 0; j <aShowRet[i][show_otherIndex].length; j++) {
+			otherTotal[j] += aShowRet[i][show_otherIndex][j];
+			otherDispersion[j] += aShowRet[i][show_otherIndex][j] * aShowRet[i][show_otherIndex][j];
+		}
+		
+	}
+	
+	//get reference data
+	referenceAverage = referenceTotal / aShowRet.length;
+	referenceDiviation = referenceDispersion / aShowRet.length - referenceAverage * referenceAverage;
+	result.push({
+		question : aInfoRet[testInfoIndex++][testInfo_questionIndex],
+		average : referenceAverage,
+		diviation : referenceDiviation
+	});
+	
+	//get others data
+	for (var j = 0; j < otherTotal.length; j++) {
+		otherAverage[j] = otherTotal[j] / aShowRet.length;
+		otherDiviation[j] = otherDispersion[j] / aShowRet.length - otherAverage[j] * otherAverage[j];
+		
+		result.push({
+			question : aInfoRet[testInfoIndex++][testInfo_questionIndex],
+			average : otherAverage[j],
+			diviation : otherDiviation[j]
+		});
+	}
+	
+	//console.log(result);
+	return result;
+}
+
+function makeParticipantResult(testName, infoRet, showRet) {
+	//$.template("participantsResult",'<p>participants</p><table class=".newspaper-b"><thead><tr><th scope="col">email</th>${theadCotent}</tr></thead><tbody>${tbody}</tbody></table>');
+	var aInfoRet = infoRet.result;
+	var aShowRet = showRet.result;
+	
+	if (infoRet.result.length > 0) {
+		var sPrefixTestId = "test_";
+		var sPrefixParticipant = "participant_";
+		var infoIndex = 0;
+		var aTr = [];
+		
+		//make threadTr
+		for (infoIndex = 0; infoIndex < aInfoRet.length; infoIndex++) {
+			if (aInfoRet[infoIndex][testInfo_testNameIndex] == testName) {
+				//create threadTr
+				aTr.push("<th scope=\"col\">" +  aInfoRet[infoIndex][testInfo_questionIndex] + "</th>");
+			}
+		}
+		
+		//make participants
+		if (aShowRet.length > 0) {
+			var aScore = [];
+			aScore.push("<tr>");
+			
+			for (var i = 0; i < aShowRet.length; i++) {
+				if (aShowRet[i][show_testNameIndex] == testName) {
+					aScore.push("<td>");
+					aScore.push(aShowRet[i][show_testerIdIndex]);
+					aScore.push("</td>");
+					aScore.push("<td>");
+					aScore.push(aShowRet[i][show_referenceIndex]);
+					aScore.push("</td>");
+					for (var j = 0; j <aShowRet[i][show_otherIndex].length; j++) {
+						aScore.push("<td>");
+						aScore.push(aShowRet[i][show_otherIndex][j]);
+						aScore.push("</td>");
+					}
+				} else if (aScore.length > 1){
+					break;
+				}
+			}
+			aScore.push("</tr>");
+			
+			var el = '<p>participants</p><table class="newspaper-b"><thead><tr><th scope="col">email</th>' + aTr.join("") + '</tr></thead><tbody>' + aScore.join("") + '</tbody></table>';
+			//console.log(el);
+			$(el).appendTo('#testResult');
+		} else {
+			$.tmpl("testResult", {
+				testName : "Noone has taken the test yet.",
+				tbodyId : "Noone"
+			}).appendTo("#testResult");
+		}
+	} else {
+		$.tmpl("testResult", {
+			testName : "TestInfo doesn't exist.",
+			tbodyId : "NoTest"
+		}).appendTo("#testResult");
+	}
+}
+
+function makeTestResult(infoRet, showRet) {
+	$.template("testResult",'<p>${testName}</p><table class="newspaper"><thead><tr><th scope="col">files</th><th scope="col">average</th><th scope="col">diviation</th></tr></thead><tbody id="${tbodyId}"></tbody></table>');
+	$.template("questionResult",'<tr><td>${question}</td><td>${average}</td><td>${diviation}</td></tr>');
+	if (infoRet.result.length > 0) {
+		var aTestNames = getTestNames(infoRet);
+		var sPrefixTestId = "test_";
+		var sPrefixParticipant = "participant_";
+		
+		if (showRet.result.length > 0) {
+			for (var i = 0; i < aTestNames.length; i++) {
+				var aQuestionScore = getQestionScore(aTestNames[i], infoRet, showRet);
+				var oQuestionTmp = ""; 
+				
+				$.tmpl("testResult", {
+					testName : aTestNames[i],
+					tbodyId : sPrefixTestId + aTestNames[i]
+				}).appendTo("#testResult");
+				
+				for (var j = 0; j < aQuestionScore.length; j++) {
+					$.tmpl("questionResult", {
+						question : aQuestionScore[j].question,
+						average : aQuestionScore[j].average,
+						diviation : aQuestionScore[j].diviation
+					}).appendTo("#" + sPrefixTestId + aTestNames[i]);
+				}
+				
+				makeParticipantResult(aTestNames[i], infoRet, showRet);
+			}
+		} else {
+			$.tmpl("testResult", {
+				testName : "Noone has taken the test yet.",
+				tbodyId : "Noone"
+			}).appendTo("#testResult");
+		}
+	} else {
+		$.tmpl("testResult", {
+			testName : "TestInfo doesn't exist.",
+			tbodyId : "NoTest"
+		}).appendTo("#testResult");
+	}
+}
+
+function showTest() {
+	$.ajax({
+		url : 'show?t=' + testId,
+		error : function(xhr, status, e) {
+			alert('ajax call error');
+		},
+		success : function(jdata) {
+			showRet = jdata;
+			$.ajax({
+				url : 'info?t=' + testId,
+				error : function(xhr, status, e) {
+					alert('ajax call error');
+				},
+				success : function(jdata) {
+					//do something
+					infoRet = jdata;
+					makeTestResult(infoRet, showRet)
+				}
+			});
+		}
+	});
+}
+
+showTest();
+
+
+
+</script>
+</body>
+</html>
